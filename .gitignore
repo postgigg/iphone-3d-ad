@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# local capture/test artifacts
+test-shot.png
+shot_*.png
