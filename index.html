@@ -89,29 +89,95 @@
     filter: drop-shadow(0 0 24px rgba(140,180,255,0.35));
   }
 
-  /* Upload controls — quiet pills, top-left */
+  /* Control header — one quiet glass panel, grouped, wraps instead of
+     overflowing. Fades in on hover so it stays out of the shot. */
   #controls {
     position: fixed;
-    top: 16px; left: 16px;
-    display: flex; gap: 8px;
+    top: 14px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 3px; padding: 5px;
+    max-width: calc(100vw - 28px);
+    background: rgba(15,19,27,0.72);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.35);
     z-index: 10;
-  }
-  #controls input[type=text] { width: 150px; cursor: text; }
-  #controls button, #controls select, #controls input[type=text] {
-    font: 500 12px/1 "SF Pro Text", -apple-system, "Inter", "Segoe UI", sans-serif;
-    color: rgba(255,255,255,0.8);
-    background: rgba(20,24,34,0.6);
-    border: 1px solid rgba(255,255,255,0.16);
-    border-radius: 999px;
-    padding: 9px 16px;
-    cursor: pointer;
-    opacity: 0.45;
-    backdrop-filter: blur(8px);
+    opacity: 0.4;
     transition: opacity 0.2s;
+    font: 500 12px/1 "SF Pro Text", -apple-system, "Inter", "Segoe UI", sans-serif;
   }
-  #controls button:hover, #controls select:hover,
-  #controls input[type=text]:hover, #controls input[type=text]:focus { opacity: 1; }
+  #controls:hover, #controls:focus-within { opacity: 1; }
+
+  /* collapsed: just the grip handle (a small square); the body slides open
+     on hover/focus so the toolbar barely takes any space at rest */
+  #ctlBody {
+    display: flex; flex-wrap: nowrap; align-items: center; gap: 3px;
+    min-width: 0; overflow: hidden;
+    max-width: 0; opacity: 0;
+    transition: max-width 0.38s cubic-bezier(.2,.8,.2,1), opacity 0.25s ease;
+  }
+  #controls:hover #ctlBody, #controls:focus-within #ctlBody, #controls.open #ctlBody {
+    flex-wrap: wrap; max-width: 92vw; opacity: 1;
+  }
+  /* vertical dock: collapse/expand height instead of width */
+  #controls.vertical #ctlBody {
+    flex-direction: column; align-items: stretch;
+    max-width: none; max-height: 0;
+    transition: max-height 0.38s cubic-bezier(.2,.8,.2,1), opacity 0.25s ease;
+  }
+  #controls.vertical:hover #ctlBody, #controls.vertical:focus-within #ctlBody,
+  #controls.vertical.open #ctlBody {
+    max-height: 86vh; opacity: 1;
+  }
+
+  #controls .grp { display: flex; align-items: center; gap: 3px; }
+  #controls .sep {
+    width: 1px; align-self: stretch; margin: 3px 4px;
+    background: rgba(255,255,255,0.12);
+  }
+  #controls button, #controls select {
+    font: inherit; color: rgba(236,242,251,0.88);
+    background: transparent; border: 0; border-radius: 9px;
+    padding: 8px 12px; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  #controls button:hover, #controls select:hover { background: rgba(255,255,255,0.1); }
+  #controls button:active { background: rgba(255,255,255,0.16); }
+  #controls input[type=text] {
+    font: inherit; color: #eef2fa;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid transparent; border-radius: 9px;
+    padding: 8px 12px; width: 150px; cursor: text;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  #controls input[type=text]:focus {
+    outline: none; background: rgba(255,255,255,0.12);
+    border-color: rgba(120,170,255,0.5);
+  }
+  #controls input[type=text]::placeholder { color: rgba(236,242,251,0.4); }
   #controls select option { background: #14181f; color: #eef2fa; }
+  #controls #recBtn.rec { color: #ff6b6b; }
+
+  /* drag grip */
+  #controls .grip {
+    cursor: grab; user-select: none; touch-action: none;
+    color: rgba(236,242,251,0.4); font-size: 14px;
+    padding: 6px 6px; align-self: center; line-height: 1;
+  }
+  #controls .grip:active { cursor: grabbing; }
+
+  /* docked vertical (left/right edge) — column layout */
+  #controls.vertical {
+    flex-direction: column; align-items: stretch;
+    max-width: none; max-height: calc(100vh - 28px); overflow: auto;
+  }
+  #controls.vertical .grp { flex-direction: column; align-items: stretch; }
+  #controls.vertical .sep { width: auto; height: 1px; margin: 4px 3px; }
+  #controls.vertical button, #controls.vertical select { text-align: left; width: 100%; }
+  #controls.vertical input[type=text] { width: 100%; box-sizing: border-box; }
 </style>
 
 <!-- Three.js from CDN — the only external dependency -->
@@ -132,23 +198,48 @@
 <div id="playpause" title="Play / pause (Spacebar)">&#9654;</div>
 <div id="fade"></div>
 <div id="controls">
-  <select id="phoneSel" title="Phone model">
-    <option value="iphone-16-pro">iPhone 16 Pro</option>
-    <option value="iphone-16-pro-max">iPhone 16 Pro Max</option>
-    <option value="iphone-15-pro">iPhone 15 Pro</option>
-    <option value="iphone-14-pro">iPhone 14 Pro</option>
-    <option value="iphone-14-pro-max">iPhone 14 Pro Max</option>
-    <option value="iphone-13">iPhone 13</option>
-  </select>
-  <button id="shotBtn" title="Shown on the phone screen; the scene recolors to match">&#8679; App screenshot</button>
-  <button id="logoBtn" title="Appears with the tagline">&#8679; Logo</button>
-  <input type="text" id="titleInput" placeholder="Custom tagline&#8230;" maxlength="60">
-  <input type="text" id="urlInput" placeholder="Live URL &#8212; localhost:3000 &#x23CE;" title="Press Enter: the phone screen becomes a real, interactive browser view. Clear + Enter to exit.">
-  <button id="interactBtn" hidden>Interact</button>
-  <button id="proxyBtn" hidden title="If a site refuses to be embedded (blank screen), route it through the local proxy">Proxy: off</button>
-  <button id="freezeBtn" hidden title="Freeze the live page onto the phone screen as an image — then Save PNG / Record work">&#128247; Capture live</button>
-  <button id="snapBtn" title="Saves the current frame as a PNG (controls are never captured)">Save PNG</button>
-  <button id="recBtn" title="Record the ad as a video file (controls are never captured)">&#9679; Record</button>
+  <span class="grip" id="ctlGrip" title="Drag to move — pull to a side to dock it vertically. Hover to expand.">&#10303;</span>
+
+  <div id="ctlBody">
+  <span class="grp">
+    <select id="phoneSel" title="Phone model">
+      <option value="iphone-16-pro">iPhone 16 Pro</option>
+      <option value="iphone-16-pro-max">iPhone 16 Pro Max</option>
+      <option value="iphone-15-pro">iPhone 15 Pro</option>
+      <option value="iphone-14-pro">iPhone 14 Pro</option>
+      <option value="iphone-14-pro-max">iPhone 14 Pro Max</option>
+      <option value="iphone-13">iPhone 13</option>
+      <option value="ipad-pro-11">iPad Pro 11&quot; (M4)</option>
+      <option value="ipad-pro-13">iPad Pro 13&quot; (M4)</option>
+    </select>
+    <button id="rotateBtn" title="Switch between portrait and landscape">&#10227;&#160;Portrait</button>
+  </span>
+
+  <span class="sep"></span>
+
+  <span class="grp">
+    <button id="shotBtn" title="Put a screenshot on the phone screen; the scene recolors to match">&#8679;&#160;Screenshot</button>
+    <button id="logoBtn" title="Logo appears with the tagline in the finale">&#8679;&#160;Logo</button>
+    <input type="text" id="titleInput" placeholder="Tagline&#8230;" maxlength="60" style="width:120px">
+  </span>
+
+  <span class="sep"></span>
+
+  <span class="grp">
+    <input type="text" id="urlInput" placeholder="Live URL &#x23CE;" title="Press Enter: the phone screen becomes a real, interactive browser view. Clear + Enter to exit.">
+    <button id="interactBtn" hidden title="Page is interactive while you can still orbit by dragging the phone body/background. Click to fully disable page interaction.">Page: on</button>
+    <button id="proxyBtn" hidden title="If a site refuses to be embedded (blank screen), route it through the local proxy">Proxy: off</button>
+    <button id="freezeBtn" hidden title="Freeze the live page onto the phone screen as an image — then Save PNG / Record work">&#128247;&#160;Capture</button>
+  </span>
+
+  <span class="sep"></span>
+
+  <span class="grp">
+    <button id="snapBtn" title="Save the current frame as a PNG (controls are never captured)">Save&#160;PNG</button>
+    <button id="recBtn" title="Record the ad as a video file (controls are never captured)">&#9679;&#160;Record</button>
+  </span>
+  </div>
+
   <input type="file" id="shotInput" accept="image/png,image/jpeg,image/webp" hidden>
   <input type="file" id="logoInput" accept="image/png,image/svg+xml,image/webp" hidden>
 </div>
@@ -209,12 +300,16 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 Object.assign(renderer.domElement.style, { position: 'fixed', inset: '0', zIndex: '1' });
 document.body.insertBefore(renderer.domElement, document.getElementById('vignette'));
 
-// CSS3D layer BEHIND the WebGL canvas — live URL mode punches a hole in
-// the canvas where the phone screen is, revealing an interactive iframe
+// CSS3D layer sits ABOVE the WebGL canvas with pointer-events:none on its
+// container, but the live iframe itself re-enables pointer-events. Result:
+// clicks/scrolls on the phone SCREEN reach the page, while drags on the
+// phone body or background fall through to the canvas and orbit — so you
+// can interact AND orbit at the same time.
 const cssScene = new THREE.Scene();
 const cssRenderer = new CSS3DRenderer();
 cssRenderer.setSize(window.innerWidth, window.innerHeight);
-Object.assign(cssRenderer.domElement.style, { position: 'fixed', inset: '0', zIndex: '0' });
+Object.assign(cssRenderer.domElement.style,
+  { position: 'fixed', inset: '0', zIndex: '2', pointerEvents: 'none' });
 document.body.insertBefore(cssRenderer.domElement, renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -254,17 +349,36 @@ scene.add(new THREE.AmbientLight(0x223044, 0.35));
 const BODY_DEPTH = 0.060, BEVEL = 0.009;
 const HALF_Z = BODY_DEPTH / 2 + BEVEL;          // half of total thickness
 
-// Selectable models. w/h/r are world-unit width, height, corner radius
-// (real handset dimensions ÷ 100); island=false gets the classic notch.
+// Selectable models. w/h/r = world-unit width, height, corner radius
+// (real device dimensions ÷ ~100). cutout: 'island' | 'notch' | 'none'.
+// bezel = screen inset from the frame (tablets wear thicker uniform bezels).
+// cssW = logical CSS width used for live/screenshot so apps render at the
+// device's real breakpoint (phone ≈ 390-430, iPad ≈ 834-1024).
 const PHONE_SPECS = {
-  'iphone-16-pro':     { label: 'IPHONE 16 PRO',     w: 0.720, h: 1.500, r: 0.105, island: true,  cams: 3 },
-  'iphone-16-pro-max': { label: 'IPHONE 16 PRO MAX', w: 0.780, h: 1.632, r: 0.110, island: true,  cams: 3 },
-  'iphone-15-pro':     { label: 'IPHONE 15 PRO',     w: 0.715, h: 1.495, r: 0.100, island: true,  cams: 3 },
-  'iphone-14-pro':     { label: 'IPHONE 14 PRO',     w: 0.715, h: 1.475, r: 0.092, island: true,  cams: 3 },
-  'iphone-14-pro-max': { label: 'IPHONE 14 PRO MAX', w: 0.780, h: 1.607, r: 0.096, island: true,  cams: 3 },
-  'iphone-13':         { label: 'IPHONE 13',         w: 0.717, h: 1.465, r: 0.090, island: false, cams: 2 }
+  'iphone-16-pro':     { label: 'IPHONE 16 PRO',     w: 0.720, h: 1.500, r: 0.105, cutout: 'island', cams: 3, bezel: 0.065, cssW: 393 },
+  'iphone-16-pro-max': { label: 'IPHONE 16 PRO MAX', w: 0.780, h: 1.632, r: 0.110, cutout: 'island', cams: 3, bezel: 0.065, cssW: 430 },
+  'iphone-15-pro':     { label: 'IPHONE 15 PRO',     w: 0.715, h: 1.495, r: 0.100, cutout: 'island', cams: 3, bezel: 0.065, cssW: 393 },
+  'iphone-14-pro':     { label: 'IPHONE 14 PRO',     w: 0.715, h: 1.475, r: 0.092, cutout: 'island', cams: 3, bezel: 0.065, cssW: 393 },
+  'iphone-14-pro-max': { label: 'IPHONE 14 PRO MAX', w: 0.780, h: 1.607, r: 0.096, cutout: 'island', cams: 3, bezel: 0.065, cssW: 430 },
+  'iphone-13':         { label: 'IPHONE 13',         w: 0.717, h: 1.465, r: 0.090, cutout: 'notch',  cams: 2, bezel: 0.065, cssW: 390 },
+  // iPad Pro M4 (2024) — 4:3-ish, uniform thin bezels, no notch, single rear cam
+  'ipad-pro-11':       { label: 'IPAD PRO 11" (M4)',  w: 1.300, h: 1.828, r: 0.060, cutout: 'none', cams: 1, bezel: 0.085, cssW: 834,  tablet: true },
+  'ipad-pro-13':       { label: 'IPAD PRO 13" (M4)',  w: 1.510, h: 1.974, r: 0.060, cutout: 'none', cams: 1, bezel: 0.090, cssW: 1024, tablet: true }
 };
 let phoneSpec = PHONE_SPECS['iphone-16-pro'];
+let phoneKey = 'iphone-16-pro';
+let orientation = 'portrait';                 // 'portrait' | 'landscape'
+const isLandscape = () => orientation === 'landscape';
+// device dimensions for the CURRENT orientation (swapped in landscape)
+function devDims() {
+  const land = isLandscape(), bz = phoneSpec.bezel;
+  const W = land ? phoneSpec.h : phoneSpec.w;
+  const H = land ? phoneSpec.w : phoneSpec.h;
+  // CSS width scales with the screen's physical width vs the portrait width,
+  // so landscape gives the device's long-edge logical width (~852 on iPhone)
+  const cssW = Math.round(phoneSpec.cssW * (W - bz) / (phoneSpec.w - bz));
+  return { W, H, bz, cssW };
+}
 
 function roundedRectShape(w, h, r) {
   const s = new THREE.Shape();
@@ -317,7 +431,10 @@ const screenMat = new THREE.MeshBasicMaterial({ map: screenTex, transparent: tru
 
 function buildPhone(spec) {
   const grp = new THREE.Group();
-  const W = spec.w, H = spec.h, R = spec.r;
+  const land = isLandscape();
+  const W = land ? spec.h : spec.w;     // swap long/short edge in landscape
+  const H = land ? spec.w : spec.h;
+  const R = spec.r;
 
   // titanium frame / body
   const bodyGeo = new THREE.ExtrudeGeometry(roundedRectShape(W, H, R), {
@@ -341,8 +458,9 @@ function buildPhone(spec) {
   bezel.position.z = HALF_Z + 0.0006;
   grp.add(bezel);
 
-  // screen plane
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.065, H - 0.065), screenMat);
+  // screen plane (bezel inset varies: thicker on tablets)
+  const bz = spec.bezel;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(W - bz, H - bz), screenMat);
   screen.position.z = HALF_Z + 0.0012;
   grp.add(screen);
   grp.userData.screen = screen;   // hidden during live-URL mode
@@ -350,7 +468,7 @@ function buildPhone(spec) {
   // rounded-rect punch hole, congruent with the live iframe's corners —
   // a plain rectangle would let dark notches peek past the rounding
   const punch = new THREE.Mesh(
-    new THREE.ShapeGeometry(roundedRectShape(W - 0.065, H - 0.065, R - 0.013), 48), punchMat);
+    new THREE.ShapeGeometry(roundedRectShape(W - bz, H - bz, Math.max(R - 0.013, 0.02)), 48), punchMat);
   punch.position.z = HALF_Z + 0.0012;
   punch.visible = false;
   grp.add(punch);
@@ -362,8 +480,8 @@ function buildPhone(spec) {
     bump.position.set(-(W / 2 - 0.195), H / 2 - 0.275, -HALF_Z);
     bump.rotation.y = Math.PI;                   // extrude toward -z
 
-    const plate = spec.cams === 3 ? 0.30 : 0.26;
-    bump.add(new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRectShape(plate, plate + 0.01, 0.085), {
+    const plate = spec.cams === 3 ? 0.30 : spec.cams === 1 ? 0.18 : 0.26;
+    bump.add(new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRectShape(plate, plate + 0.01, spec.cams === 1 ? 0.06 : 0.085), {
       depth: 0.012, bevelEnabled: true,
       bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 3, curveSegments: 32
     }), titanium));
@@ -388,12 +506,19 @@ function buildPhone(spec) {
       new THREE.CircleGeometry(0.018, 24),
       new THREE.MeshBasicMaterial({ color: 0xfff3d6 })
     );
-    if (spec.cams === 3) {                       // Pro: triangle + flash
+    if (spec.cams === 3) {                       // Pro phone: triangle + flash
       bump.add(lensAt(-0.072,  0.072));
       bump.add(lensAt(-0.072, -0.072));
       bump.add(lensAt( 0.072,  0.0));
       flash.position.set(0.072, 0.105, 0.021);
-    } else {                                     // non-Pro: diagonal pair
+    } else if (spec.cams === 1) {                // iPad: single lens + LiDAR + flash
+      bump.add(lensAt(0, 0.02));
+      const lidar = new THREE.Mesh(new THREE.CircleGeometry(0.014, 24),
+        new THREE.MeshBasicMaterial({ color: 0x0a0d14 }));
+      lidar.position.set(0, -0.06, 0.021);
+      bump.add(lidar);
+      flash.position.set(0.06, -0.06, 0.021);
+    } else {                                     // non-Pro phone: diagonal pair
       bump.add(lensAt(-0.058,  0.058));
       bump.add(lensAt( 0.058, -0.058));
       flash.position.set(0.062, 0.062, 0.021);
@@ -402,8 +527,9 @@ function buildPhone(spec) {
     grp.add(bump);
   }
 
-  // side buttons (power right; action + volumes left)
-  {
+  // side buttons — portrait phones only (they'd land on wrong edges when
+  // the device is rebuilt sideways, and read oddly on tablets)
+  if (!spec.tablet && !land) {
     const btn = (x, y, h) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(0.014, h, 0.030), titanium);
       m.position.set(x, y, 0);
@@ -420,16 +546,29 @@ function buildPhone(spec) {
 let phone = buildPhone(phoneSpec);
 scene.add(phone);
 
-function setPhoneModel(key) {
-  if (!PHONE_SPECS[key]) return;
-  phoneSpec = PHONE_SPECS[key];
+function rebuildPhone() {
   scene.remove(phone);
   phone.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   phone = buildPhone(phoneSpec);
   scene.add(phone);
-  document.querySelector('#tagline small').textContent = phoneSpec.label;
-  // live URL mode targets the new screen mesh and re-sizes its iframe
+  document.querySelector('#tagline small').textContent =
+    phoneSpec.label + (isLandscape() ? ' · LANDSCAPE' : '');
+  // match the screen canvas to the device aspect (orientation-aware) so
+  // uploaded screenshots and the demo UI aren't stretched
+  const { W, H, bz } = devDims();
+  const aspectH = Math.round(720 * (H - bz) / (W - bz));
+  if (ui.height !== aspectH) ui.height = aspectH;
   if (typeof urlMode !== 'undefined' && urlMode) setLiveURL(liveURL);
+}
+function setPhoneModel(key) {
+  if (!PHONE_SPECS[key]) return;
+  phoneKey = key;
+  phoneSpec = PHONE_SPECS[key];
+  rebuildPhone();
+}
+function setOrientation(o) {
+  orientation = o;
+  rebuildPhone();
 }
 
 /* =====================================================================
@@ -556,14 +695,15 @@ const SANS = '-apple-system, "SF Pro Display", "Inter", "Segoe UI", sans-serif';
 // Dynamic Island (Pro models) or classic notch (e.g. iPhone 13),
 // drawn over whatever is on screen so it always looks native
 function drawCutout(g, W, T) {
+  if (phoneSpec.cutout === 'none' || isLandscape()) return;  // tablets/landscape: skip
   g.fillStyle = '#000';
-  if (phoneSpec.island) {
+  if (phoneSpec.cutout === 'island') {
     roundRectPath(g, (W - 226) / 2, 26, 226, 66, 33); g.fill();
     g.fillStyle = 'rgba(40,46,66,0.9)';
     g.beginPath(); g.arc(W / 2 + 42, 59, 10, 0, 7); g.fill();
     g.fillStyle = `rgba(80,230,180,${0.55 + 0.45 * Math.sin(T * 3)})`;
     g.beginPath(); g.arc(W / 2 + 80, 59, 8, 0, 7); g.fill();
-  } else {
+  } else {                                        // classic notch
     roundRectPath(g, (W - 320) / 2, -34, 320, 86, 26); g.fill();
     g.fillStyle = 'rgba(40,46,66,0.9)';
     g.beginPath(); g.arc(W / 2 + 84, 30, 9, 0, 7); g.fill();
@@ -619,6 +759,31 @@ function drawUI(t, T) {
       rad.addColorStop(1, 'rgba(255,255,255,0)');
       g.fillStyle = rad; g.fillRect(0, 0, W, H);
     }
+    g.restore();
+    screenTex.needsUpdate = true;
+    return;
+  }
+
+  /* ---- tablets & landscape: the demo dashboard is portrait-phone-shaped,
+     so show a clean wallpaper instead (screenshots/live still render) ---- */
+  if (phoneSpec.tablet || isLandscape()) {
+    const bw = g.createLinearGradient(0, 0, W, H);
+    bw.addColorStop(0, '#0a1020'); bw.addColorStop(1, '#0c1430');
+    g.fillStyle = bw; g.fillRect(0, 0, W, H);
+    const pool = g.createRadialGradient(W * 0.68, H * 0.32, 30, W * 0.68, H * 0.32, W * 0.7);
+    pool.addColorStop(0, 'rgba(77,159,255,0.20)'); pool.addColorStop(1, 'rgba(77,159,255,0)');
+    g.fillStyle = pool; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#eaf2ff'; g.textAlign = 'center';
+    g.font = `700 ${Math.round(W * 0.11)}px ${SANS}`;
+    g.letterSpacing = '10px';
+    g.fillText('AURA', W / 2, H / 2);
+    g.letterSpacing = '0px';
+    g.font = `500 ${Math.round(W * 0.028)}px ${SANS}`;
+    g.fillStyle = 'rgba(200,214,240,0.55)';
+    g.fillText('Upload a screenshot or load a live URL', W / 2, H / 2 + W * 0.08);
+    g.textAlign = 'left';
+    const tg = sm(25.5, 27.6, t);
+    if (tg > 0) { g.fillStyle = `rgba(170,205,255,${0.12 * tg})`; g.fillRect(0, 0, W, H); }
     g.restore();
     screenTex.needsUpdate = true;
     return;
@@ -1078,8 +1243,13 @@ addEventListener('drop', e => { e.preventDefault(); loadShot(e.dataTransfer.file
 const fadeEl = document.getElementById('fade');
 const tagEl  = document.getElementById('tagline');
 
-/* ---- phone model selector (also settable via ?model=iphone-14-pro) ---- */
+/* ---- phone model + orientation selectors ---- */
 document.getElementById('phoneSel').onchange = e => setPhoneModel(e.target.value);
+const rotateBtn = document.getElementById('rotateBtn');
+rotateBtn.onclick = () => {
+  setOrientation(isLandscape() ? 'portrait' : 'landscape');
+  rotateBtn.textContent = isLandscape() ? '⟲ Landscape' : '⟲ Portrait';
+};
 
 /* =====================================================================
    LIVE URL MODE — the phone screen becomes a real browser view.
@@ -1089,9 +1259,11 @@ document.getElementById('phoneSel').onchange = e => setPhoneModel(e.target.value
    bypassed in this mode (bloom would paint over the hole).
    "Interact" disables canvas pointer events so clicks reach the iframe.
    ===================================================================== */
-const IFRAME_W = 390;                       // CSS px; height follows the model
-let urlMode = false, liveURL = '', cssObj = null, interacting = false;
+const _normal = new THREE.Vector3();        // reused for screen-facing test
+const _toCam = new THREE.Vector3();
+let urlMode = false, liveURL = '', cssObj = null, pageInteractive = true;
 let proxyOn = false, proxyTouched = false;   // auto until the user overrides
+let liveCssW = phoneSpec.cssW;               // CSS width used for the live iframe
 const urlInput = document.getElementById('urlInput');
 const interactBtn = document.getElementById('interactBtn');
 const proxyBtn = document.getElementById('proxyBtn');
@@ -1110,26 +1282,30 @@ function setLiveURL(url) {
   interactBtn.hidden = !urlMode;
   proxyBtn.hidden = !urlMode;
   freezeBtn.hidden = !urlMode;
-  if (!urlMode) {
-    interacting = false;
-    cv.style.pointerEvents = 'auto';
-    interactBtn.textContent = 'Interact';
-    return;
-  }
-  const hpx = Math.round(IFRAME_W * (phoneSpec.h - 0.065) / (phoneSpec.w - 0.065));
+  interactBtn.textContent = pageInteractive ? 'Page: on' : 'Page: off';
+  if (!urlMode) return;
+  const { W, H, bz, cssW } = devDims();
+  liveCssW = cssW;
+  const hpx = Math.round(cssW * (H - bz) / (W - bz));
   // iframe corner radius in CSS px = the punch hole's world radius / scale,
   // so DOM rounding and the canvas hole are congruent on every model
-  const brPx = Math.round((phoneSpec.r - 0.013) / ((phoneSpec.w - 0.065) / IFRAME_W));
+  const brPx = Math.round(Math.max(phoneSpec.r - 0.013, 0.02) / ((W - bz) / cssW));
   // TRUE SAFE AREAS: web apps don't reserve room for the island the way
   // native apps do, so the page gets a black status band (the island
   // lives there, black-on-black like real hardware) and a black home
   // band. The app sits between them — nothing ever covers its content,
   // and all rounding stays on the hardware bezel where it belongs.
-  const SAFE_T = 54, SAFE_B = 24;
+  // Tablets/landscape have no top cutout, so they get only a slim inset.
+  const slim = phoneSpec.cutout === 'none' || isLandscape();
+  const SAFE_T = slim ? 14 : 54;
+  const SAFE_B = slim ? 14 : 24;
   const wrap = document.createElement('div');
   Object.assign(wrap.style, {
-    position: 'relative', width: IFRAME_W + 'px', height: hpx + 'px',
-    borderRadius: brPx + 'px', overflow: 'hidden', background: '#000'
+    position: 'relative', width: cssW + 'px', height: hpx + 'px',
+    borderRadius: brPx + 'px', overflow: 'hidden', background: '#000',
+    // the wrap re-enables pointer events over the screen (container is none),
+    // so the page is interactive while drags elsewhere still orbit
+    pointerEvents: pageInteractive ? 'auto' : 'none'
   });
   // public sites almost always block iframing (X-Frame-Options /
   // frame-ancestors), so the proxy defaults ON for them and OFF for
@@ -1169,14 +1345,17 @@ function setLiveURL(url) {
   });
   batt.appendChild(battFill);
   wrap.appendChild(batt);
-  // island / notch sits inside the band — black on black, like the metal
-  const cut = document.createElement('div');
-  Object.assign(cut.style, phoneSpec.island
-    ? { position: 'absolute', left: '50%', top: '11px', transform: 'translateX(-50%)',
-        width: '122px', height: '34px', borderRadius: '17px', background: '#000' }
-    : { position: 'absolute', left: '50%', top: '0', transform: 'translateX(-50%)',
-        width: '172px', height: '28px', borderRadius: '0 0 14px 14px', background: '#000' });
-  wrap.appendChild(cut);
+  // island / notch sits inside the band — black on black, like the metal.
+  // Tablets (cutout:'none') and landscape get nothing (it'd be on the wrong edge).
+  if (phoneSpec.cutout !== 'none' && !isLandscape()) {
+    const cut = document.createElement('div');
+    Object.assign(cut.style, phoneSpec.cutout === 'island'
+      ? { position: 'absolute', left: '50%', top: '11px', transform: 'translateX(-50%)',
+          width: '122px', height: '34px', borderRadius: '17px', background: '#000' }
+      : { position: 'absolute', left: '50%', top: '0', transform: 'translateX(-50%)',
+          width: '172px', height: '28px', borderRadius: '0 0 14px 14px', background: '#000' });
+    wrap.appendChild(cut);
+  }
   // home indicator in the bottom band
   const homeBar = document.createElement('div');
   Object.assign(homeBar.style, {
@@ -1202,10 +1381,16 @@ urlInput.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   setLiveURL(normalizeURL(urlInput.value.trim()));
 });
+// You can interact with the page AND orbit at the same time. This button
+// just lets you fully DISABLE page interaction (so dragging over the screen
+// orbits too, instead of scrolling the page).
 interactBtn.onclick = () => {
-  interacting = !interacting;
-  cv.style.pointerEvents = interacting ? 'none' : 'auto';
-  interactBtn.textContent = interacting ? 'Orbit mode' : 'Interact';
+  pageInteractive = !pageInteractive;
+  if (cssObj) {
+    const w = cssObj.element;
+    w.style.pointerEvents = pageInteractive ? 'auto' : 'none';
+  }
+  interactBtn.textContent = pageInteractive ? 'Page: on' : 'Page: off';
 };
 proxyBtn.onclick = () => {
   proxyTouched = true;
@@ -1237,8 +1422,11 @@ freezeBtn.onclick = async () => {
   const prev = freezeBtn.textContent;
   freezeBtn.textContent = 'Capturing…';
   try {
-    const w = 440;
-    const h = Math.round(w * (phoneSpec.h - 0.065) / (phoneSpec.w - 0.065));
+    // render at the device's real CSS width (orientation-aware) so the
+    // headless shot matches the device's actual layout
+    const dd = devDims();
+    const w = dd.cssW;
+    const h = Math.round(w * (dd.H - dd.bz) / (dd.W - dd.bz));
     const current = currentLiveURL();
     // route through the proxy when it's on, so the shot's headless browser
     // hits our proxy (which holds the shared session/cookies) → same page
@@ -1408,15 +1596,16 @@ recBtn.onclick = () => {
     const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
     downloadBlob(new Blob(recChunks, { type: mime || 'video/webm' }), `iphone-ad.${ext}`);
     recorder = null;
-    recBtn.textContent = '● Record';
-    recBtn.style.color = '';
+    recBtn.innerHTML = '&#9679;&#160;Record';
+    recBtn.classList.remove('rec');
   };
   recorder.start();
-  recBtn.textContent = '■ Stop & save';
-  recBtn.style.color = '#ff6b6b';
+  recBtn.innerHTML = '&#9632;&#160;Stop &amp; save';
+  recBtn.classList.add('rec');
 };
 const clock  = new THREE.Clock();
 let T = 0;        // ad-timeline clock (accumulated so it can be paused)
+let realT = 0;    // real elapsed time — always advances, even when paused
 let prevReal = 0; // previous wall-clock sample, for frame deltas
 let paused = false;
 
@@ -1435,6 +1624,59 @@ addEventListener('keydown', e => {
   e.preventDefault();
   setPaused(!paused);
 });
+
+/* ---- Draggable control header: drag the grip to move it; release near an
+   edge to dock — left/right become a vertical column, top/bottom a row. ---- */
+(() => {
+  const ctl = document.getElementById('controls');
+  const grip = document.getElementById('ctlGrip');
+  let drag = false, offX = 0, offY = 0, downX = 0, downY = 0, moved = false;
+  const place = (x, y) => {
+    const r = ctl.getBoundingClientRect();
+    ctl.style.left = Math.max(8, Math.min(innerWidth - r.width - 8, x)) + 'px';
+    ctl.style.top  = Math.max(8, Math.min(innerHeight - r.height - 8, y)) + 'px';
+  };
+  grip.addEventListener('pointerdown', e => {
+    drag = true; moved = false;
+    downX = e.clientX; downY = e.clientY;
+    grip.setPointerCapture(e.pointerId);
+    const r = ctl.getBoundingClientRect();
+    ctl.style.transform = 'none';                 // detach from centered default
+    ctl.style.right = 'auto'; ctl.style.bottom = 'auto';
+    ctl.style.left = r.left + 'px'; ctl.style.top = r.top + 'px';
+    offX = e.clientX - r.left; offY = e.clientY - r.top;
+    ctl.style.opacity = '1';
+    e.preventDefault();
+  });
+  grip.addEventListener('pointermove', e => {
+    if (!drag) return;
+    if (Math.abs(e.clientX - downX) > 4 || Math.abs(e.clientY - downY) > 4) moved = true;
+    place(e.clientX - offX, e.clientY - offY);
+  });
+  const dock = () => {
+    if (!drag) return; drag = false;
+    if (!moved) {              // a tap (no drag) toggles the panel open/closed
+      ctl.classList.toggle('open');
+      return;
+    }
+    const r = ctl.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const dL = cx, dR = innerWidth - cx, dT = cy, dB = innerHeight - cy;
+    const m = Math.min(dL, dR, dT, dB);
+    ctl.classList.toggle('vertical', m === dL || m === dR);   // side → column
+    requestAnimationFrame(() => {                  // re-pin after layout switch
+      const rr = ctl.getBoundingClientRect();
+      let x = rr.left, y = rr.top;
+      if (m === dL) x = 14;
+      else if (m === dR) x = innerWidth - rr.width - 14;
+      else if (m === dT) y = 14;
+      else y = innerHeight - rr.height - 14;
+      place(x, y);
+    });
+  };
+  grip.addEventListener('pointerup', dock);
+  grip.addEventListener('pointercancel', dock);
+})();
 
 /* ---------------------------------------------------------------------
    INTERACTIVE 3D — physically based orbit.
@@ -1457,7 +1699,7 @@ cv.addEventListener('pointerdown', e => {
   orbit.vAz = orbit.vEl = 0;                      // grabbing absorbs momentum
   cv.setPointerCapture(e.pointerId);
   cv.style.cursor = 'grabbing';
-  lastInput = T;
+  lastInput = realT;
 });
 cv.addEventListener('pointermove', e => {
   if (!dragging) return;
@@ -1472,7 +1714,7 @@ cv.addEventListener('pointermove', e => {
   orbit.vEl = lerp(orbit.vEl, dEl / dts, 0.35);
   lastMoveMs = now;
   lastX = e.clientX; lastY = e.clientY;
-  lastInput = T;
+  lastInput = realT;
 });
 const endDrag = () => { dragging = false; cv.style.cursor = 'grab'; };
 cv.addEventListener('pointerup', endDrag);
@@ -1480,7 +1722,7 @@ cv.addEventListener('pointercancel', endDrag);
 cv.addEventListener('wheel', e => {
   e.preventDefault();
   zoomTarget = clamp(zoomTarget * (1 + e.deltaY * 0.0012), 0.55, 2.2);
-  lastInput = T;
+  lastInput = realT;
 }, { passive: false });
 
 function animate() {
@@ -1489,31 +1731,38 @@ function animate() {
   // The rAF loop keeps running while paused (so prevReal stays current and
   // there's no jump on resume); we just hold dt at 0 and freeze T.
   const now = clock.getElapsedTime();
-  let dt = Math.min(Math.max(now - prevReal, 0), 0.1);
+  const realDt = Math.min(Math.max(now - prevReal, 0), 0.1);
   prevReal = now;
-  if (paused) dt = 0;
+  realT += realDt;                            // never pauses
+  const dt = paused ? 0 : realDt;             // scene animation freezes when paused
   T += dt;
   const t = T % DURATION;                    // 30-second looping ad time
 
-  /* ---- orbit physics (semi-implicit Euler) ---- */
-  if (!dragging) {
-    if (T - lastInput > 2.5) {
+  /* ---- orbit + zoom physics ----
+     When PLAYING: full physics — flick momentum + auto spring-home to the
+     cinematic path. When PAUSED: no auto-motion (so the scene truly freezes),
+     but your direct drag still rotates and scroll still zooms. ---- */
+  if (paused) {
+    orbit.vAz = orbit.vEl = 0;                  // kill drift; nothing auto-moves
+  } else if (!dragging) {
+    if (realT - lastInput > 2.5) {
       // spring home: under-damped (ζ≈0.7) so it settles with a soft sway
       const k = 16, c = 5.6;
-      orbit.vAz += (-k * orbit.az - c * orbit.vAz) * dt;
-      orbit.vEl += (-k * orbit.el - c * orbit.vEl) * dt;
+      orbit.vAz += (-k * orbit.az - c * orbit.vAz) * realDt;
+      orbit.vEl += (-k * orbit.el - c * orbit.vEl) * realDt;
       zoomTarget = 1;
     } else {
       // free spin: momentum from the flick, bled off by air friction
-      const f = Math.exp(-dt * 1.4);
+      const f = Math.exp(-realDt * 1.4);
       orbit.vAz *= f; orbit.vEl *= f;
     }
-    orbit.az += orbit.vAz * dt;
-    orbit.el = clamp(orbit.el + orbit.vEl * dt, -1.2, 1.2);
+    orbit.az += orbit.vAz * realDt;
+    orbit.el = clamp(orbit.el + orbit.vEl * realDt, -1.2, 1.2);
   }
-  // inertial dolly: zoom chases its target through a stiff spring
-  zoomV += (-18 * (zoom - zoomTarget) - 8.5 * zoomV) * dt;
-  zoom += zoomV * dt;
+  // inertial dolly: always chases its target so scroll-zoom works even when
+  // paused; it converges and stops (target only auto-recenters while playing)
+  zoomV += (-18 * (zoom - zoomTarget) - 8.5 * zoomV) * realDt;
+  zoom += zoomV * realDt;
 
   /* ---- phone transform ---- */
   // weighty rise: fast entry that overshoots ~2% and settles, like real mass
@@ -1549,13 +1798,15 @@ function animate() {
            + 0.005 * Math.sin(T * 0.7);                       // handheld breath
   const el =  0.10 + 0.06 * sm(5, 15, t) - 0.13 * sm(15.5, 24, t) + 0.02 * sm(24.5, 28, t)
            + 0.004 * Math.sin(T * 0.9 + 2);
-  let dist = (3.5 - 0.5 * sm(5, 15, t) + 0.3 * sm(15.5, 24, t)) * zoom * (1 - 0.05 * hit);
+  // larger devices (iPad) need the camera pulled back to stay framed
+  const viewScale = Math.max(1, phoneSpec.h / 1.55);
+  let dist = (3.5 - 0.5 * sm(5, 15, t) + 0.3 * sm(15.5, 24, t)) * zoom * (1 - 0.05 * hit) * viewScale;
   let cAz = az + orbit.az;
   let cEl = clamp(el + orbit.el, -1.25, 1.25);
   if (urlMode) {           // steady front camera while the page is live
     cAz = orbit.az + 0.004 * Math.sin(T * 0.5);
     cEl = clamp(0.05 + orbit.el, -1.25, 1.25);
-    dist = 3.05 * zoom;
+    dist = 3.05 * zoom * viewScale;
   }
   camera.position.set(
     camTarget.x + dist * Math.sin(cAz) * Math.cos(cEl),
@@ -1602,10 +1853,21 @@ function animate() {
       const sc = phone.userData.screen;
       sc.getWorldPosition(cssObj.position);
       sc.getWorldQuaternion(cssObj.quaternion);
-      cssObj.scale.setScalar((phoneSpec.w - 0.065) / IFRAME_W);
+      cssObj.scale.setScalar((devDims().W - phoneSpec.bezel) / liveCssW);
+      // The page is a flat layer with no depth vs the 3D phone, so hide it
+      // when the screen faces away — otherwise it bleeds through (mirrored)
+      // when you orbit to the back. Then you just see the phone's body.
+      _normal.set(0, 0, 1).applyQuaternion(cssObj.quaternion);
+      _toCam.copy(camera.position).sub(cssObj.position);
+      cssObj.visible = _normal.dot(_toCam) > 0;
     }
     renderer.render(scene, camera);
     cssRenderer.render(cssScene, camera);
+    // CSS3DRenderer's own container divs default to pointer-events:auto and
+    // would block background orbit; force them transparent to events so only
+    // the iframe wrap (auto) captures, everything else falls through to canvas
+    const cam = cssRenderer.domElement.firstElementChild;
+    if (cam && cam.style.pointerEvents !== 'none') cam.style.pointerEvents = 'none';
   } else {
     composer.render();
   }
