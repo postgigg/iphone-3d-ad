@@ -1719,11 +1719,33 @@ cv.addEventListener('pointermove', e => {
 const endDrag = () => { dragging = false; cv.style.cursor = 'grab'; };
 cv.addEventListener('pointerup', endDrag);
 cv.addEventListener('pointercancel', endDrag);
+const ZOOM_MIN = 0.3, ZOOM_MAX = 2.4;        // smaller = closer; wider range
+const applyZoom = factor => {
+  zoomTarget = clamp(zoomTarget * factor, ZOOM_MIN, ZOOM_MAX);
+  lastInput = realT;                          // hold the zoom (no auto-recenter)
+};
 cv.addEventListener('wheel', e => {
   e.preventDefault();
-  zoomTarget = clamp(zoomTarget * (1 + e.deltaY * 0.0012), 0.55, 2.2);
-  lastInput = realT;
+  applyZoom(1 + e.deltaY * 0.0012);
 }, { passive: false });
+
+// Ctrl/⌘ + wheel zooms ANYWHERE — even over the live page — so a big device
+// that fills the screen can still be zoomed without hunting for background.
+addEventListener('wheel', e => {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  applyZoom(1 + e.deltaY * 0.0014);
+}, { passive: false });
+
+// Keyboard zoom: + / =  to zoom in, - / _  to zoom out (always works,
+// regardless of what's covering the screen). 0 resets.
+addEventListener('keydown', e => {
+  const tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target && e.target.isContentEditable)) return;
+  if (e.key === '+' || e.key === '=') { e.preventDefault(); applyZoom(0.88); }
+  else if (e.key === '-' || e.key === '_') { e.preventDefault(); applyZoom(1 / 0.88); }
+  else if (e.key === '0') { e.preventDefault(); zoomTarget = 1; lastInput = realT; }
+});
 
 function animate() {
   requestAnimationFrame(animate);
